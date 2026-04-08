@@ -1,0 +1,72 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hve_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hve}
+      POSTGRES_USER: ${POSTGRES_USER:-hve}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hve_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hve}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: hve_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hve}:${POSTGRES_PASSWORD:-hve_secret}@postgres:5432/${POSTGRES_DB:-hve}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change_me_refresh_in_production}
+      PORT: 3001
+      NODE_ENV: ${NODE_ENV:-production}
+      SMTP_HOST: ${SMTP_HOST:-mailhog}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@haarlemmermeervoorelkaar.nl}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+    container_name: hve_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: hve_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  postgres_data:
+  uploads:

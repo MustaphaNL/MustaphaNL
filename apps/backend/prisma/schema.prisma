@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String
+  firstName         String
+  lastName          String
+  dateOfBirth       DateTime
+  gender            Gender
+  postcode          String
+  neighbourhood     String
+  phone             String?
+  profilePhoto      String?
+  bio               String?
+  roles             UserRole[]
+  isAdmin           Boolean   @default(false)
+  isVerified        Boolean   @default(false)
+  isActive          Boolean   @default(true)
+  deletedAt         DateTime?
+  availability      String[]  // e.g. ["weekday_morning", "weekend_afternoon"]
+  interests         String[]  // category ids
+  verifyToken       String?
+  verifyTokenExpiry DateTime?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  listings          Listing[]
+  sentMessages      Message[] @relation("SentMessages")
+  receivedMessages  Message[] @relation("ReceivedMessages")
+  pageViews         PageView[]
+
+  @@index([email])
+  @@index([isActive, isVerified])
+}
+
+model Listing {
+  id                String        @id @default(uuid())
+  title             String
+  type              ListingType
+  status            ListingStatus @default(draft)
+  categoryId        String
+  description       String
+  neighbourhood     String
+  latitude          Float?
+  longitude         Float?
+  frequency         Frequency
+  contactPreference ContactPreference
+  showPhone         Boolean       @default(false)
+  showEmail         Boolean       @default(false)
+  images            String[]
+  authorId          String
+  author            User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  views             Int           @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  expiresAt         DateTime?
+
+  messages          Message[]
+  pageViews         ListingView[]
+
+  @@index([status, type])
+  @@index([categoryId])
+  @@index([neighbourhood])
+  @@index([authorId])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  body       String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([receiverId, isRead])
+  @@index([listingId])
+  @@index([senderId, receiverId])
+}
+
+model PageView {
+  id        String   @id @default(uuid())
+  path      String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  ipHash    String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+}
+
+model ListingView {
+  id        String   @id @default(uuid())
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  ipHash    String?
+  createdAt DateTime @default(now())
+
+  @@index([listingId])
+  @@index([createdAt])
+}
+
+enum Gender {
+  man
+  vrouw
+  anders
+  prefer_not_to_say
+}
+
+enum UserRole {
+  volunteer
+  help_seeker
+  organisation
+}
+
+enum ListingType {
+  help_request
+  volunteer_offer
+}
+
+enum ListingStatus {
+  draft
+  active
+  closed
+}
+
+enum Frequency {
+  once
+  recurring
+  flexible
+}
+
+enum ContactPreference {
+  in_app
+  email
+  both
+}
