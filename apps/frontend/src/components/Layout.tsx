@@ -34,7 +34,7 @@ export default function Layout() {
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        boxShadow: '0 2px 8px rgba(26,26,140,0.07)',
       }}>
         <div className="container" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px' }}>
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>

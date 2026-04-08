@@ -1,27 +1,38 @@
-/* ===== CSS Variables ===== */
+/* ===== CSS Variables — Haarlemmermeer Voor Elkaar brand palette ===== */
 :root {
-  --primary: #6DC82A;
-  --primary-dark: #5ab022;
-  --navy: #1A1A8C;
-  --navy-dark: #13137a;
+  /* Primary brand colours (from logo) */
+  --primary: #6DC82A;       /* lime green — "Haarlemmermeer" text */
+  --primary-dark: #59a821;  /* darker green for hover states */
+  --navy: #1A1A8C;           /* navy blue — "voorelkaar" text */
+  --navy-dark: #13137a;      /* darker navy for hover */
+
+  /* Mosaic H accent colours (triangles in logo H) */
   --magenta: #E8197D;
   --orange: #F47920;
   --purple: #7B4BA0;
   --royal-blue: #2B3BA8;
   --light-blue: #4DC8F0;
-  --lime: #6DC82A;
+
+  /* Neutrals */
   --bg: #F7F7F7;
   --card-bg: #ffffff;
   --text: #1A1A1A;
   --text-muted: #666666;
-  --border: #e0e0e0;
-  --shadow: 0 2px 8px rgba(0,0,0,0.08);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
-  --radius: 12px;
+  --border: #e2e2e2;
+
+  /* Shadows */
+  --shadow: 0 2px 10px rgba(26,26,140,0.07);
+  --shadow-md: 0 6px 24px rgba(26,26,140,0.13);
+  --shadow-card: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(26,26,140,0.08);
+
+  /* Radii & motion */
+  --radius: 14px;
   --radius-sm: 8px;
   --radius-full: 999px;
   --transition: 0.18s ease;
   --min-tap: 44px;
+
+  /* Fonts */
   --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-ar: 'Cairo', 'Noto Kufi Arabic', system-ui, sans-serif;
 }
@@ -80,13 +91,14 @@ main {
 .card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
   transition: transform var(--transition), box-shadow var(--transition);
+  border: 1px solid rgba(0,0,0,0.04);
 }
 
 .card:hover { box-shadow: var(--shadow-md); }
-.card-body { padding: 16px; }
+.card-body { padding: 18px; }
 
 /* ===== Buttons ===== */
 .btn {
@@ -240,9 +252,17 @@ main {
 .badge-gray { background: #e8e8e8; color: #555; }
 .badge-navy { background: #d0d3f0; color: #1A1A8C; }
 
-/* ===== Geometric pattern background ===== */
+/* ===== Geometric mosaic pattern (inspired by the logo H triangle mosaic) ===== */
+/* Light version — for use on white/light backgrounds */
 .geo-bg {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpolygon points='0,0 30,0 0,30' fill='%236DC82A' opacity='0.04'/%3E%3Cpolygon points='60,0 60,30 30,0' fill='%231A1A8C' opacity='0.04'/%3E%3Cpolygon points='0,60 0,30 30,60' fill='%23E8197D' opacity='0.04'/%3E%3Cpolygon points='60,60 30,60 60,30' fill='%23F47920' opacity='0.04'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpolygon points='0,0 40,0 0,40' fill='%236DC82A' opacity='0.05'/%3E%3Cpolygon points='40,0 80,0 80,40' fill='%231A1A8C' opacity='0.05'/%3E%3Cpolygon points='0,40 40,80 0,80' fill='%23E8197D' opacity='0.04'/%3E%3Cpolygon points='80,40 80,80 40,80' fill='%23F47920' opacity='0.04'/%3E%3Cpolygon points='40,0 80,40 40,80 0,40' fill='%234DC8F0' opacity='0.025'/%3E%3C/svg%3E");
+  background-size: 80px 80px;
+}
+
+/* Dark version — for use inside the navy hero section */
+.geo-hero {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpolygon points='0,0 40,0 0,40' fill='%236DC82A' opacity='0.12'/%3E%3Cpolygon points='40,0 80,0 80,40' fill='%234DC8F0' opacity='0.10'/%3E%3Cpolygon points='0,40 40,80 0,80' fill='%23E8197D' opacity='0.08'/%3E%3Cpolygon points='80,40 80,80 40,80' fill='%23F47920' opacity='0.09'/%3E%3Cpolygon points='40,0 80,40 40,80 0,40' fill='%23ffffff' opacity='0.03'/%3E%3C/svg%3E");
+  background-size: 80px 80px;
 }
 
 /* ===== Skeleton loading ===== */
