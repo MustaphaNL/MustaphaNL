@@ -1,16 +1,23 @@
-import { Router, Response } from 'express';
-import { body, validationResult } from 'express-validator';
+import { Router, Request, Response } from 'express';
+import { body, param, validationResult } from 'express-validator';
 import bcrypt from 'bcryptjs';
 import prisma from '../utils/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { uploadSingle } from '../middleware/upload';
+import { generalLimiter, writeLimiter, uploadLimiter, sensitiveLimiter } from '../middleware/rateLimit';
+import { sanitizeText } from '../utils/sanitize';
 import path from 'path';
 import fs from 'fs';
 
 export const usersRouter = Router();
 
 // GET /api/users/:id (public profile)
-usersRouter.get('/:id', async (req, res: Response) => {
+usersRouter.get('/:id', generalLimiter, [param('id').isUUID()], async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ error: 'Invalid user ID' });
+    return;
+  }
   const user = await prisma.user.findUnique({
     where: { id: req.params.id, isActive: true, deletedAt: null },
     select: {
@@ -30,6 +37,7 @@ usersRouter.get('/:id', async (req, res: Response) => {
 // PATCH /api/users/me — update profile
 usersRouter.patch(
   '/me',
+  writeLimiter,
   requireAuth,
   [
     body('firstName').optional().trim().notEmpty(),
@@ -53,12 +61,12 @@ usersRouter.patch(
     const updated = await prisma.user.update({
       where: { id: req.user!.userId },
       data: {
-        ...(firstName !== undefined && { firstName }),
-        ...(lastName !== undefined && { lastName }),
-        ...(postcode !== undefined && { postcode }),
-        ...(neighbourhood !== undefined && { neighbourhood }),
-        ...(bio !== undefined && { bio }),
-        ...(phone !== undefined && { phone }),
+        ...(firstName !== undefined && { firstName: sanitizeText(firstName) }),
+        ...(lastName !== undefined && { lastName: sanitizeText(lastName) }),
+        ...(postcode !== undefined && { postcode: sanitizeText(postcode) }),
+        ...(neighbourhood !== undefined && { neighbourhood: sanitizeText(neighbourhood) }),
+        ...(bio !== undefined && { bio: sanitizeText(bio) }),
+        ...(phone !== undefined && { phone: phone ? sanitizeText(phone) : null }),
         ...(availability !== undefined && { availability }),
         ...(interests !== undefined && { interests }),
         ...(roles !== undefined && { roles }),
@@ -76,7 +84,7 @@ usersRouter.patch(
 );
 
 // POST /api/users/me/photo
-usersRouter.post('/me/photo', requireAuth, uploadSingle.single('photo'), async (req: AuthRequest, res: Response) => {
+usersRouter.post('/me/photo', uploadLimiter, requireAuth, uploadSingle.single('photo'), async (req: AuthRequest, res: Response) => {
   if (!req.file) {
     res.status(400).json({ error: 'No file uploaded' });
     return;
@@ -98,8 +106,15 @@ usersRouter.post('/me/photo', requireAuth, uploadSingle.single('photo'), async (
 // POST /api/users/me/change-password
 usersRouter.post(
   '/me/change-password',
+  sensitiveLimiter,
   requireAuth,
-  [body('currentPassword').notEmpty(), body('newPassword').isLength({ min: 8 })],
+  [
+    body('currentPassword').notEmpty(),
+    body('newPassword')
+      .isLength({ min: 8 })
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+  ],
   async (req: AuthRequest, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -121,7 +136,7 @@ usersRouter.post(
 );
 
 // DELETE /api/users/me — GDPR soft delete
-usersRouter.delete('/me', requireAuth, async (req: AuthRequest, res: Response) => {
+usersRouter.delete('/me', sensitiveLimiter, requireAuth, async (req: AuthRequest, res: Response) => {
   await prisma.user.update({
     where: { id: req.user!.userId },
     data: { deletedAt: new Date(), isActive: false },

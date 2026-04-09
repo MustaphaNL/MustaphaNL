@@ -1,16 +1,28 @@
 import { Router, Request, Response } from 'express';
-import { body, query, validationResult } from 'express-validator';
+import { body, param, query, validationResult } from 'express-validator';
 import prisma from '../utils/prisma';
 import { requireAuth, optionalAuth, AuthRequest } from '../middleware/auth';
 import { upload } from '../middleware/upload';
+import { generalLimiter, writeLimiter, uploadLimiter } from '../middleware/rateLimit';
+import { sanitizeText, clampInt } from '../utils/sanitize';
 import path from 'path';
 import fs from 'fs';
 
 export const listingsRouter = Router();
 
+// GET /api/listings/my/listings — must be before /:id to avoid route conflict
+listingsRouter.get('/my/listings', requireAuth, async (req: AuthRequest, res: Response) => {
+  const listings = await prisma.listing.findMany({
+    where: { authorId: req.user!.userId },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(listings);
+});
+
 // GET /api/listings — public browse
 listingsRouter.get(
   '/',
+  generalLimiter,
   optionalAuth,
   [
     query('page').optional().isInt({ min: 1 }).toInt(),
@@ -23,9 +35,10 @@ listingsRouter.get(
     query('lng').optional().isFloat(),
   ],
   async (req: Request, res: Response) => {
-    const page = parseInt(req.query.page as string) || 1;
-    const pageSize = Math.min(parseInt(req.query.pageSize as string) || 20, 50);
-    const { type, category, neighbourhood, search } = req.query as Record<string, string>;
+    const page = clampInt(req.query.page, 1, 1000, 1);
+    const pageSize = clampInt(req.query.pageSize, 1, 50, 20);
+    const { type, category, neighbourhood } = req.query as Record<string, string>;
+    const search = req.query.search ? sanitizeText(req.query.search as string) : undefined;
 
     const where: Record<string, unknown> = {
       status: 'active',
@@ -68,7 +81,12 @@ listingsRouter.get(
 );
 
 // GET /api/listings/:id
-listingsRouter.get('/:id', optionalAuth, async (req: AuthRequest, res: Response) => {
+listingsRouter.get('/:id', generalLimiter, [param('id').isUUID()], optionalAuth, async (req: AuthRequest, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ error: 'Invalid listing ID' });
+    return;
+  }
   const listing = await prisma.listing.findUnique({
     where: { id: req.params.id },
     include: {
@@ -93,7 +111,7 @@ listingsRouter.get('/:id', optionalAuth, async (req: AuthRequest, res: Response)
   // Strip phone number unless showPhone and user is logged in
   const data: typeof listing & { author: typeof listing.author & { phone?: string | null } } = { ...listing };
   if (!listing.showPhone || !req.user) {
-    data.author = { ...listing.author, phone: undefined };
+    data.author = { ...listing.author, phone: null };
   }
 
   // Strip email: never expose directly
@@ -103,6 +121,7 @@ listingsRouter.get('/:id', optionalAuth, async (req: AuthRequest, res: Response)
 // POST /api/listings
 listingsRouter.post(
   '/',
+  uploadLimiter,
   requireAuth,
   upload.array('images', 3),
   [
@@ -153,9 +172,27 @@ listingsRouter.post(
 // PATCH /api/listings/:id
 listingsRouter.patch(
   '/:id',
+  writeLimiter,
   requireAuth,
   upload.array('images', 3),
+  [
+    param('id').isUUID(),
+    body('title').optional().trim().notEmpty().isLength({ max: 100 }),
+    body('categoryId').optional().notEmpty(),
+    body('description').optional().trim().notEmpty().isLength({ max: 1000 }),
+    body('neighbourhood').optional().notEmpty(),
+    body('frequency').optional().isIn(['once', 'recurring', 'flexible']),
+    body('contactPreference').optional().isIn(['in_app', 'email', 'both']),
+    body('showPhone').optional().isBoolean(),
+    body('showEmail').optional().isBoolean(),
+    body('status').optional().isIn(['draft', 'active', 'closed']),
+  ],
   async (req: AuthRequest, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      res.status(400).json({ error: 'Validation failed', details: errors.mapped() });
+      return;
+    }
     const listing = await prisma.listing.findUnique({ where: { id: req.params.id } });
 
     if (!listing) { res.status(404).json({ error: 'Not found' }); return; }
@@ -190,7 +227,7 @@ listingsRouter.patch(
 );
 
 // DELETE /api/listings/:id
-listingsRouter.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+listingsRouter.delete('/:id', writeLimiter, requireAuth, async (req: AuthRequest, res: Response) => {
   const listing = await prisma.listing.findUnique({ where: { id: req.params.id } });
 
   if (!listing) { res.status(404).json({ error: 'Not found' }); return; }
@@ -208,11 +245,3 @@ listingsRouter.delete('/:id', requireAuth, async (req: AuthRequest, res: Respons
   res.json({ message: 'Listing deleted' });
 });
 
-// GET /api/listings/my/listings
-listingsRouter.get('/my/listings', requireAuth, async (req: AuthRequest, res: Response) => {
-  const listings = await prisma.listing.findMany({
-    where: { authorId: req.user!.userId },
-    orderBy: { createdAt: 'desc' },
-  });
-  res.json(listings);
-});

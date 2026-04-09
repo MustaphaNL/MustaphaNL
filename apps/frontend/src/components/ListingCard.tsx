@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { nl, enUS, arSA } from 'date-fns/locale';
+import type { Locale } from 'date-fns';
 import type { Listing } from '../api/listings';
 import { CATEGORIES } from '@hve/shared';
 

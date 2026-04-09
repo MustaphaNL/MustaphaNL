@@ -1,15 +1,17 @@
 import { Router, Response } from 'express';
-import { body, validationResult } from 'express-validator';
+import { body, param, validationResult } from 'express-validator';
 import prisma from '../utils/prisma';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 import { sendMessageNotification } from '../utils/email';
+import { generalLimiter, messageLimiter } from '../middleware/rateLimit';
+import { sanitizeText } from '../utils/sanitize';
 
 export const messagesRouter = Router();
 
 messagesRouter.use(requireAuth);
 
 // GET /api/messages/inbox — all threads for current user
-messagesRouter.get('/inbox', async (req: AuthRequest, res: Response) => {
+messagesRouter.get('/inbox', generalLimiter, async (req: AuthRequest, res: Response) => {
   // Get latest message per listing per conversation partner
   const messages = await prisma.message.findMany({
     where: {
@@ -44,7 +46,12 @@ messagesRouter.get('/inbox', async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/messages/thread/:listingId/:partnerId
-messagesRouter.get('/thread/:listingId/:partnerId', async (req: AuthRequest, res: Response) => {
+messagesRouter.get('/thread/:listingId/:partnerId', generalLimiter, [param('listingId').isUUID(), param('partnerId').isUUID()], async (req: AuthRequest, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ error: 'Invalid parameters' });
+    return;
+  }
   const { listingId, partnerId } = req.params;
   const userId = req.user!.userId;
 
@@ -79,6 +86,7 @@ messagesRouter.get('/thread/:listingId/:partnerId', async (req: AuthRequest, res
 // POST /api/messages — send a message
 messagesRouter.post(
   '/',
+  messageLimiter,
   [
     body('listingId').notEmpty(),
     body('receiverId').notEmpty(),
@@ -91,7 +99,8 @@ messagesRouter.post(
       return;
     }
 
-    const { listingId, receiverId, body: messageBody } = req.body;
+    const { listingId, receiverId } = req.body;
+    const messageBody = sanitizeText(req.body.body);
     const senderId = req.user!.userId;
 
     if (senderId === receiverId) {
@@ -141,7 +150,7 @@ messagesRouter.post(
 );
 
 // GET /api/messages/unread-count
-messagesRouter.get('/unread-count', async (req: AuthRequest, res: Response) => {
+messagesRouter.get('/unread-count', generalLimiter, async (req: AuthRequest, res: Response) => {
   const count = await prisma.message.count({
     where: { receiverId: req.user!.userId, isRead: false },
   });

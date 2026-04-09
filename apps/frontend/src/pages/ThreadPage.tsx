@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { nl, enUS, arSA } from 'date-fns/locale';
+import type { Locale } from 'date-fns';
 import toast from 'react-hot-toast';
 import { messagesApi } from '../api/messages';
 import { useAuthStore } from '../stores/authStore';

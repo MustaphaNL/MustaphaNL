@@ -1,10 +1,14 @@
 import { Router, Request, Response } from 'express';
+import { body, param, query, validationResult } from 'express-validator';
 import prisma from '../utils/prisma';
 import { requireAdmin, AuthRequest } from '../middleware/auth';
+import { adminLimiter } from '../middleware/rateLimit';
+import { clampInt, sanitizeText } from '../utils/sanitize';
 
 export const adminRouter = Router();
 
 adminRouter.use(requireAdmin);
+adminRouter.use(adminLimiter);
 
 // GET /api/admin/stats
 adminRouter.get('/stats', async (_req: Request, res: Response) => {
@@ -48,7 +52,7 @@ adminRouter.get('/stats', async (_req: Request, res: Response) => {
 
 // GET /api/admin/page-views — daily views for chart
 adminRouter.get('/page-views', async (req: Request, res: Response) => {
-  const days = parseInt(req.query.days as string) || 30;
+  const days = clampInt(req.query.days, 1, 365, 30);
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const views = await prisma.$queryRaw<{ date: string; count: bigint }[]>`
@@ -64,9 +68,9 @@ adminRouter.get('/page-views', async (req: Request, res: Response) => {
 
 // GET /api/admin/users
 adminRouter.get('/users', async (req: Request, res: Response) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const pageSize = Math.min(parseInt(req.query.pageSize as string) || 20, 100);
-  const search = req.query.search as string | undefined;
+  const page = clampInt(req.query.page, 1, 1000, 1);
+  const pageSize = clampInt(req.query.pageSize, 1, 100, 20);
+  const search = req.query.search ? sanitizeText(req.query.search as string) : undefined;
 
   const where = search
     ? {
@@ -98,7 +102,17 @@ adminRouter.get('/users', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/admin/users/:id
-adminRouter.patch('/users/:id', async (req: AuthRequest, res: Response) => {
+adminRouter.patch('/users/:id', [
+  param('id').isUUID(),
+  body('isActive').optional().isBoolean(),
+  body('isAdmin').optional().isBoolean(),
+  body('roles').optional().isArray(),
+], async (req: AuthRequest, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ error: 'Validation failed', details: errors.mapped() });
+    return;
+  }
   const { isActive, isAdmin, roles } = req.body;
 
   // Prevent self-demotion
@@ -121,7 +135,7 @@ adminRouter.patch('/users/:id', async (req: AuthRequest, res: Response) => {
 });
 
 // DELETE /api/admin/users/:id (hard delete)
-adminRouter.delete('/users/:id', async (req: AuthRequest, res: Response) => {
+adminRouter.delete('/users/:id', [param('id').isUUID()], async (req: AuthRequest, res: Response) => {
   if (req.params.id === req.user!.userId) {
     res.status(400).json({ error: 'Cannot delete your own account via admin' });
     return;
@@ -132,9 +146,9 @@ adminRouter.delete('/users/:id', async (req: AuthRequest, res: Response) => {
 
 // GET /api/admin/listings
 adminRouter.get('/listings', async (req: Request, res: Response) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const pageSize = Math.min(parseInt(req.query.pageSize as string) || 20, 100);
-  const search = req.query.search as string | undefined;
+  const page = clampInt(req.query.page, 1, 1000, 1);
+  const pageSize = clampInt(req.query.pageSize, 1, 100, 20);
+  const search = req.query.search ? sanitizeText(req.query.search as string) : undefined;
   const status = req.query.status as string | undefined;
 
   const where: Record<string, unknown> = {};
@@ -164,7 +178,15 @@ adminRouter.get('/listings', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/admin/listings/:id
-adminRouter.patch('/listings/:id', async (req: Request, res: Response) => {
+adminRouter.patch('/listings/:id', [
+  param('id').isUUID(),
+  body('status').optional().isIn(['draft', 'active', 'closed', 'flagged']),
+], async (req: Request, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(400).json({ error: 'Validation failed', details: errors.mapped() });
+    return;
+  }
   const { status } = req.body;
   const listing = await prisma.listing.update({
     where: { id: req.params.id },
@@ -174,7 +196,7 @@ adminRouter.patch('/listings/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/admin/listings/:id
-adminRouter.delete('/listings/:id', async (req: Request, res: Response) => {
+adminRouter.delete('/listings/:id', [param('id').isUUID()], async (req: Request, res: Response) => {
   await prisma.listing.delete({ where: { id: req.params.id } });
   res.json({ message: 'Listing deleted' });
 });

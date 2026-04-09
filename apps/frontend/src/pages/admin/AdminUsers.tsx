@@ -72,7 +72,7 @@ export default function AdminUsers() {
                 <tr key={user.id as string} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '10px 14px' }}>
                     <p style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user.firstName as string} {user.lastName as string}</p>
-                    {user.isAdmin && <span className="badge badge-navy" style={{ fontSize: '0.65rem' }}>Admin</span>}
+                    {user.isAdmin ? <span className="badge badge-navy" style={{ fontSize: '0.65rem' }}>Admin</span> : null}
                   </td>
                   <td style={{ padding: '10px 14px', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{user.email as string}</td>
                   <td style={{ padding: '10px 14px', fontSize: '0.8rem' }}>

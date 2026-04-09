@@ -7,6 +7,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/
 import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 import { authLimiter } from '../middleware/rateLimit';
 import { requireAuth, AuthRequest } from '../middleware/auth';
+import { sanitizeText } from '../utils/sanitize';
 
 export const authRouter = Router();
 
@@ -17,7 +18,10 @@ authRouter.post(
   '/register',
   [
     body('email').isEmail().normalizeEmail(),
-    body('password').isLength({ min: 8 }),
+    body('password')
+      .isLength({ min: 8 })
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
     body('firstName').trim().notEmpty(),
     body('lastName').trim().notEmpty(),
     body('dateOfBirth').isISO8601(),
@@ -33,7 +37,13 @@ authRouter.post(
       return;
     }
 
-    const { email, password, firstName, lastName, dateOfBirth, gender, postcode, neighbourhood, phone, bio, roles, availability, interests } = req.body;
+    const { email, password, dateOfBirth, gender, roles, availability, interests } = req.body;
+    const firstName = sanitizeText(req.body.firstName);
+    const lastName = sanitizeText(req.body.lastName);
+    const postcode = sanitizeText(req.body.postcode);
+    const neighbourhood = sanitizeText(req.body.neighbourhood);
+    const phone = req.body.phone ? sanitizeText(req.body.phone) : null;
+    const bio = req.body.bio ? sanitizeText(req.body.bio) : null;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -203,7 +213,13 @@ authRouter.post('/forgot-password', [body('email').isEmail().normalizeEmail()], 
 // POST /api/auth/reset-password
 authRouter.post(
   '/reset-password',
-  [body('token').notEmpty(), body('password').isLength({ min: 8 })],
+  [
+    body('token').notEmpty(),
+    body('password')
+      .isLength({ min: 8 })
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+  ],
   async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
