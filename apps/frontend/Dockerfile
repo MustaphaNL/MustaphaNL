@@ -21,8 +21,10 @@ RUN npm run build
 FROM nginx:1.25-alpine AS runner
 
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Place config in /templates so nginx's docker-entrypoint runs envsubst on $PORT
+COPY apps/frontend/nginx.conf /etc/nginx/templates/default.conf.template
 
-EXPOSE 80
+# Railway injects PORT; fall back to 80 for local Docker use
+ENV PORT=80
 
 CMD ["nginx", "-g", "daemon off;"]
