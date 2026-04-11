@@ -12,4 +12,4 @@ FROM nginx:alpine
 COPY --from=build /app/apps/frontend/dist /usr/share/nginx/html
 COPY --from=build /app/apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD sh -c "sed -i 's/__PORT__/'\"$PORT\"'/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
