@@ -1,12 +1,9 @@
 # Stage 1: Build the React app
 FROM node:18-alpine AS build
 WORKDIR /app
-COPY package*.json ./
-COPY apps/frontend/package*.json ./apps/frontend/
-COPY packages/shared/package*.json ./packages/shared/
-RUN npm ci --workspace=apps/frontend --include-workspace-root
 COPY . .
 WORKDIR /app/apps/frontend
+RUN npm install
 RUN npx tsc --noEmit || true
 RUN npx vite build
 
