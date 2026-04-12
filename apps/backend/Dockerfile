@@ -1,3 +1,4 @@
+
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -21,8 +22,6 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-RUN apk add --no-cache dumb-init
-
 COPY apps/backend/package.json ./
 RUN npm install --omit=dev
 
@@ -37,5 +36,4 @@ RUN chmod +x entrypoint.sh
 
 EXPOSE 3001
 
-ENTRYPOINT ["dumb-init", "--"]
 CMD ["./entrypoint.sh"]
