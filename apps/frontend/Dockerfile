@@ -6,8 +6,7 @@ COPY apps/frontend/package*.json ./
 RUN npm ci
 
 COPY packages/shared /packages/shared
-
-ENV VITE_API_URL=/api
+ENV VITE_API_URL=
 
 COPY apps/frontend/ .
 RUN npm run build
