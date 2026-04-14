@@ -19,4 +19,4 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 COPY apps/frontend/nginx.conf /etc/nginx/nginx.conf
 
-CMD ["/bin/sh", "-c", "sed -i 's/__PORT__/\"$PORT\"/g' /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
+CMD ["nginx", "-g", "daemon off;"]
