@@ -23,4 +23,4 @@ RUN npm run build
 EXPOSE 3001
 
 # Run migrations and start the server
-CMD ["/bin/sh", "-c", "sed -i \"s/__PORT__/$PORT/g\" /etc/nginx/nginx.conf && sed -i \"s|__API_URL__|$API_URL|g\" /etc/nginx/nginx.conf && nginx -g 'daemon off;'"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
