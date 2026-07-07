@@ -147,3 +147,28 @@ De 3 artikelen (EMS vs RF, Gua sha voor beginners, K-beauty routine) zijn precie
 ---
 
 *Opmerking bij de methode: omdat de audit-omgeving geen direct browserverkeer naar de site toestond, zijn thema-rendering, checkout-flow en werkelijke Core Web Vitals niet visueel gecontroleerd. De bevindingen hierboven komen rechtstreeks uit de live Shopify-data van de store en zijn daarmee exact, maar een aanvullende handmatige mobiele test (menu, productpagina, checkout doorlopen) blijft aan te raden.*
+
+---
+
+## Addendum (7 juli 2026, n.a.v. PageSpeed-meting): kapotte code in theme.liquid gevonden en gefixt
+
+De PageSpeed-meting van de eigenaar (Speed Index 2,8 s mobiel — groen) bevestigde dat de site snel genoeg is. Bij het naspeuren van de meldingen is in `layout/theme.liquid` een ernstiger probleem gevonden:
+
+1. **Kapotte Google site-verification metatag** (regel 4): de tag was nooit afgesloten (`content="7ZIkfWwNjnFcm8G` zonder `">`), waardoor de browser de volgende regel — de `<meta charset="utf-8">` — opslokte. Gevolg: Search Console-verificatie kan nooit slagen én de charset-declaratie ontbrak. De geplakte code is bovendien afgekapt (15 tekens i.p.v. ±43) en moet opnieuw uit Search Console gekopieerd worden.
+2. **Dubbele `</body>`**: het Organization JSON-LD-schema stond *buiten* de body (na een eerste `</body>`), gevolgd door een tweede `</body>`. Ongeldige HTML.
+3. **Verkeerd domein in het schema**: het JSON-LD verwees naar `https://www.dounyastore.nl` terwijl het primaire domein zonder www is.
+
+**Status:** alle drie de fouten zijn gecorrigeerd in het niet-gepubliceerde thema "Dawn - DEEL 2 preview" (byte-voor-byte geverifieerd via checksum). Het live thema kon via de koppeling niet beschreven worden; daarvoor is een handmatige copy-paste in de code-editor nodig (instructies apart geleverd).
+
+**Beoordeling van de overige PageSpeed-meldingen:**
+
+| Melding | Fixbaar? | Toelichting |
+|---|---|---|
+| Renderblokkering (150 ms) | Deels, laag rendement | `base.css` + component-CSS is Dawn-ontwerp; `accelerated-checkout-backwards-compat.css` wordt door Shopify zelf geïnjecteerd. 150 ms winst weegt niet op tegen het risico van CSS-herstructurering |
+| Gedwongen dynamische aanpassing (5–25 ms) | Nee | Veroorzaakt door Shopify's Web Pixels Manager (`wpm/...js`) en `global.js` van Dawn; verwaarloosbaar effect |
+| Netwerkafhankelijkheidsstructuur (font 731 ms) | Al geoptimaliseerd | Het DM Sans-font wordt al gepreload met `font-display: swap`; de `shop-cart-sync`-chunks zijn van Shopify's Shop-integratie en niet aanpasbaar |
+| Cache-levensduur (151 KiB) | Nee | Shopify-/pixelscripts met korte TTL — buiten controle van de merchant |
+| Afbeeldingslevering (45 KiB) | Ja | Vervang de PNG-productfoto (`7.png` van het 4-in-1 Gezichtsapparaat) door WebP/JPEG en snoei de fotosets van 29/18 naar 6–8 beelden |
+| Verouderde JavaScript (13 KiB) | Nee | Shopify-polyfills |
+
+Conclusie: de site is qua snelheid gezond; de echte winst van deze meting was het ontdekken van de kapotte verificatietag — vermoedelijk dé reden dat Search Console-verificatie (en daarmee indexering-monitoring) nooit gelukt is.
