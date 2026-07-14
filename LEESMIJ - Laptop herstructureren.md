@@ -26,6 +26,12 @@ Claude (in de cloud) kan niet rechtstreeks bij de bestanden op je laptop. Daarom
    powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Desktop\Herstructureer-ClaudeProjecten.ps1"
    ```
 
+   Wil je de map **Musty Product Manager for Dounyastore** liever in je **OneDrive** dan op het bureaublad? Voeg dan `-MustyInOneDrive` toe:
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\Desktop\Herstructureer-ClaudeProjecten.ps1" -MustyInOneDrive
+   ```
+
 5. Klaar! Op je bureaublad vind je een **logbestand** met precies wat er is verplaatst en aangemaakt.
 
 ## Veiligheid

@@ -11,9 +11,12 @@
 #       structuur (00 t/m 09) inclusief templates en DPM-register.
 #
 #  Gebruik (PowerShell):
-#    .\Herstructureer-ClaudeProjecten.ps1            -> voert alles uit
-#    .\Herstructureer-ClaudeProjecten.ps1 -DryRun    -> laat alleen zien
-#                                                       wat er ZOU gebeuren
+#    .\Herstructureer-ClaudeProjecten.ps1                   -> voert alles uit
+#    .\Herstructureer-ClaudeProjecten.ps1 -DryRun           -> laat alleen zien
+#                                                              wat er ZOU gebeuren
+#    .\Herstructureer-ClaudeProjecten.ps1 -MustyInOneDrive  -> zet de map
+#        "Musty Product Manager for Dounyastore" in je OneDrive
+#        in plaats van op het bureaublad
 #
 #  Er wordt NIETS verwijderd. Alleen verplaatst of aangemaakt.
 #  Van elke actie wordt een logbestand op het bureaublad gezet.
@@ -21,7 +24,8 @@
 
 param(
     [switch]$DryRun,
-    [string]$ClaudeMapNaam = "Claude projecten"
+    [string]$ClaudeMapNaam = "Claude projecten",
+    [switch]$MustyInOneDrive   # zet de Musty-structuur in OneDrive i.p.v. op het bureaublad
 )
 
 $ErrorActionPreference = "Stop"
@@ -145,7 +149,23 @@ else {
 Schrijf ""
 Schrijf "STAP 3: Map 'Musty Product Manager for Dounyastore' aanmaken..."
 
-$PM = Join-Path $Desktop "Musty Product Manager for Dounyastore"
+# Doellocatie bepalen: bureaublad, of OneDrive als -MustyInOneDrive is meegegeven
+$MustyBasis = $Desktop
+if ($MustyInOneDrive) {
+    $oneDrivePad = $env:OneDrive
+    if (-not $oneDrivePad) { $oneDrivePad = $env:OneDriveConsumer }
+    if (-not $oneDrivePad) { $oneDrivePad = $env:OneDriveCommercial }
+    if ($oneDrivePad -and (Test-Path -LiteralPath $oneDrivePad)) {
+        $MustyBasis = $oneDrivePad
+        Schrijf "  Doel: OneDrive ($oneDrivePad)"
+    }
+    else {
+        Schrijf "  LET OP: geen OneDrive-map gevonden op deze computer."
+        Schrijf "  De structuur wordt daarom op het bureaublad gezet: $Desktop"
+    }
+}
+
+$PM = Join-Path $MustyBasis "Musty Product Manager for Dounyastore"
 $structuur = @(
     "00 - Handleiding & Strategie",
     "01 - Product Pipeline",
