@@ -1,0 +1,12 @@
+{
+  "eyebrow": "Technisch bouwdossier · versie 1.0",
+  "title": "Vrijwilligersplatform Haarlemmermeer",
+  "subtitle": "Alles wat nodig is om het platform te bouwen: datamodel, functionele eisen, matching, moderatie, privacy, beveiliging en bouwvolgorde.",
+  "footer": "Technisch bouwdossier · vrijwilligersplatform Haarlemmermeer",
+  "meta": [
+    { "label": "DATUM", "value": "31 augustus 2026" },
+    { "label": "VERVOLG OP", "value": "Technische audit haarlemmermeervoorelkaar.nl" },
+    { "label": "SCOPE", "value": "Beter dan het huidige platform" },
+    { "label": "UITGANGSPUNT", "value": "Eigen initiatief, geen leveranciersdata" }
+  ]
+}
